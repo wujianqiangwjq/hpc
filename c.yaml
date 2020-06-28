@@ -1,0 +1,39 @@
+recyletime: 15
+influx:
+  address: "127.0.0.1:8086"
+  username: "influxdb"
+  password: "influxdb"
+  database: "lico"
+  timeout: 6
+
+hosts:
+- host: "127.0.0.1:8649"
+  rp: "hour"
+  metrics:
+  - name: load
+    tags:
+    - key: host
+      value:
+        section: host
+        name: "-NAME"
+    fields:
+    - key: value
+      value:
+        section: metric
+        name: load-one
+  - name: gpu
+    tags:
+      - key: host
+        value:
+          section: host
+          name: "-NAME"
+      - key: index
+        value:
+          section: metric
+          re: true
+          name: "gpu([\\d]+)_.*"
+    fields:
+      - key: mem
+        value:
+          metric:
+            name: "gpu[\\d]+_mem_pct"
