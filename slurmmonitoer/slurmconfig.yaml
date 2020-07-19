@@ -1,0 +1,84 @@
+recyle: 15
+groupnum: 500
+cpunum: 4
+db:
+  mysql:
+    driver: postgresql
+    username: lico
+    password: 123456
+    port: 5432
+    address: 127.0.0.1
+    dbname: lico
+    table: scheduler_job
+    idleconns: 4
+    maxopenconns: 8
+  redis:
+    address: 127.0.0.1
+    password: 123456
+    port: 6379
+  locatdir: /var/lib/myslurm
+  maps:
+    - metric: jobid
+      redis: jobid
+      mysql: jobid
+      type: int64
+    - metric: jobname
+      redis: jobname
+      mysql: jobname
+      type: string
+    - metric: queue
+      redis: queue
+      mysql: queue
+      type: string
+    - metric: qtime
+      redis: qtime
+      mysql: qtime
+      type: int64
+    - metric: starttime
+      redis: starttime
+      mysql: starttime
+      type: int64
+    - metric: endtime
+      redis: endtime
+      mysql: endtime
+      type: int64
+    - metric: submiter
+      redis: submiter
+      mysql: submiter
+      type: string
+    - metric: jobstatus
+      redis: jobstatus
+      mysql: jobstatus
+      type: int
+    - metric: nodescount
+      redis: nodescount
+      mysql: nodescount
+      type: int
+    - metric: cpuscount
+      redis: cpuscount
+      mysql: cpuscount
+      type: int
+    - metric: tres_text
+      redis: tres_text
+      mysql: tres_text
+      type: string
+    - metric: memory
+      redis: memory
+      mysql: memory
+      type: int64
+    - metric: gpus
+      redis: gpus
+      mysql: gpus
+      type: int
+    - metric: errfile
+      redis: errfile
+      mysql: errfile
+      type: string
+    - metric: outfile
+      redis: outfile
+      mysql: outfile
+      type: string
+    - metric: command
+      redis: command
+      mysql: command
+      type: string
