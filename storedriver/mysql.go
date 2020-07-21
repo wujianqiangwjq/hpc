@@ -1,6 +1,7 @@
 package storedriver
 
 import (
+	"errors"
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -14,9 +15,9 @@ type MysqlConfig struct {
 	Database     string `yaml:"dbname"`
 	Address      string `yaml:"address"`
 	Port         string `yaml:"port"`
-	IdleConns    int   `yaml:"idleconns"`
-	MaxOpenConns int `yaml:"maxopenconns"`
-	Table       string `yaml:"table"`
+	IdleConns    int    `yaml:"idleconns"`
+	MaxOpenConns int    `yaml:"maxopenconns"`
+	Table        string `yaml:"table"`
 }
 
 func Open(config *MysqlConfig) (*gorose.Engin, error) {
@@ -33,6 +34,23 @@ func Open(config *MysqlConfig) (*gorose.Engin, error) {
 
 func InsertData(engin *gorose.Engin, table string, data map[string]interface{}) error {
 	orm := engin.NewOrm()
-	_, err := orm.Table(table).Data(data).Insert()
-	return err
+	var jobid int
+	var err error = errors.New("jobid can't find")
+	jobidinterface, ok := data["jobid"]
+	if !ok {
+		return err
+	}
+	switch jobidinterface.(type) {
+	case float64:
+		jobid = int(jobidinterface.(float64))
+	case int:
+		jobid = jobidinterface.(int)
+	}
+	count, _ := orm.Table(table).Where("jobid", "=", jobid).Count()
+	if count == 0 {
+		_, err := orm.Table(table).Data(data).Insert()
+		return err
+	}
+	return nil
+
 }

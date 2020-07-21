@@ -33,16 +33,19 @@ struct privitejob {
     time_t submit_time;
     time_t start_time;
     time_t end_time;
-    char* user_name;
+    uint32_t  user_id;
     int job_state;
     int num_nodes;
     int num_cpus;
-    char* tres_per_job;
+    char *nodes;
+    char* tres_per_node;
     uint64_t memory_used;
     char* std_err;
-    char* outfile;
+    char* std_out;
     char* command;
-}
+    uint32_t gpus;
+    char* work_dir;
+};
 
 void printall()
 {
@@ -89,24 +92,27 @@ void free_jobs(job_info_msg_t *jobs){
 }
 
 struct privitejob get_job(job_info_msg_t *jobs, int index){
-    slurm_job_info_t slurmjob=NULL;
+    slurm_job_info_t slurmjob;
     struct privitejob job;
-    slurmjob =jobs.job_array[index];
+    slurmjob =jobs->job_array[index];
     job.jobid = slurmjob.job_id;
-    job.name = slurmjob.jobname;
+    job.name = slurmjob.name;
     job.partition = slurmjob.partition;
     job.submit_time = slurmjob.submit_time;
     job.start_time = slurmjob.start_time;
     job.end_time = slurmjob.end_time;
-    job.user_name = slurmjob.user_name;
+    job.user_id = slurmjob.user_id;
     job.job_state = slurmjob.job_state;
     job.num_nodes = slurmjob.num_nodes;
     job.num_cpus = slurmjob.num_cpus;
-    job.tres_per_job = slurmjob.tres_per_job;
+    job.tres_per_node = slurmjob.tres_per_node;
     job.std_err = slurmjob.std_err;
+     job.nodes = slurmjob.nodes;
     job.std_out = slurmjob.std_out;
     job.command = slurmjob.command;
-    if slurmjob.job_resrcs != NULL{
+    job.gpus = slurmjob.gres_detail_cnt;
+    job.work_dir = slurmjob.work_dir;
+    if( slurmjob.job_resrcs != NULL){
                 job.memory_used = 0;
                 int j;
                 for (j = 0; j < slurmjob.job_resrcs->nhosts; j++)

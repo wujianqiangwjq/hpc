@@ -1,42 +1,42 @@
 package storedriver
 
 import (
-	"sync"
-	"io"
 	"errors"
+	"sync"
+
+	"github.com/go-redis/redis"
 )
+
 type Pool struct {
-	m sync.Mutex
-	resources chan io.Closer
-	factory Connecter
-	closed bool
+	m         sync.Mutex
+	resources chan *redis.Client
+	factory   *RedisClient
+	closed    bool
 }
 
-type Connecter interface {
-	Connect() (io.Closer,error)
-}
 var ErrPoolClosed = errors.New("Pool has been closed.")
-func NewPool(cn Connecter, size int)(*Pool,error){
+
+func NewPool(cn *RedisClient, size int) (*Pool, error) {
 	if size <= 0 {
-		return  nil, errors.New("Size value too small.")
+		return nil, errors.New("Size value too small.")
 	}
-	return &Pool{resources: make(chan io.Closer, size),factory: cn},nil
+	return &Pool{resources: make(chan *redis.Client, size), factory: cn}, nil
 }
 
-func (p *Pool) Acquire()(io.Closer, error){
+func (p *Pool) Acquire() (*redis.Client, error) {
 	select {
-	case res, ok := <- p.resources:
-		if !ok{
+	case res, ok := <-p.resources:
+		if !ok {
 			return nil, ErrPoolClosed
 		}
-		return res,nil
+		return res, nil
 	default:
 		return p.factory.Connect()
 
 	}
 }
 
-func (p *Pool)Release(r io.Closer){
+func (p *Pool) Release(r *redis.Client) {
 	p.m.Lock()
 	defer p.m.Unlock()
 	if p.closed {
@@ -50,10 +50,9 @@ func (p *Pool)Release(r io.Closer){
 		r.Close()
 	}
 
-
 }
 
-func (p *Pool)Close(){
+func (p *Pool) Close() {
 	p.m.Lock()
 	defer p.m.Unlock()
 	if p.closed {
