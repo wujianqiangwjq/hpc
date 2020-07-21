@@ -148,6 +148,22 @@ func (job *Job) Write(table string) {
 			}
 
 		} else {
+			switch job.Jobstatus {
+			case 0:
+				delete(data, "starttime")
+				delete(data, "endtime")
+				delete(data, "nodescount")
+				delete(data, "cpuscount")
+				delete(data, "memory")
+				delete(data, "gpus")
+				delete(data, "nodes")
+				delete(data, "tres_text")
+
+			case 1:
+				delete(data, "endtime")
+			case 2:
+				delete(data, "endtime")
+			}
 			redisc, er := RedisPool.Acquire()
 			if er == nil {
 				redierr := storedriver.SetData(redisc, strconv.Itoa(int(job.Jobid)), data)
