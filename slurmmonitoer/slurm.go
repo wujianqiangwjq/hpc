@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"os/user"
 	"runtime"
 	"strconv"
@@ -274,7 +275,7 @@ func init() {
 	Table = config.Db.Mysqlcon.Table
 	SyncBadgerJob()
 	DelAllFromRedis()
-	file, _ = os.OpenFile(LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, _ := os.OpenFile(LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	Logger = log.New(file, "Trace:", log.LstdFlags|log.Llongfile)
 
 }
