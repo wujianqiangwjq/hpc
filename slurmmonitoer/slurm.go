@@ -136,15 +136,20 @@ func (job *Job) Write(table string) {
 
 			inserterr := storedriver.InsertData(MysqlPool, table, data)
 			if inserterr != nil {
-				log.Println(inserterr)
+				Logger.Println(inserterr)
 				filerr := FilesHandle.Add(strconv.Itoa(int(job.Jobid)), data)
-				log.Println(filerr)
+				Logger.Println(filerr)
 			}
-			storedriver.DeleteKeys(redisc, strconv.Itoa(int(job.Jobid)))
-			if storedriver.CheckActive(redisc) {
-				RedisPool.Release(redisc)
+			delerr := storedriver.DeleteKeys(redisc, strconv.Itoa(int(job.Jobid)))
+			if delerr != nil {
+				Logger.Println(delerr)
+				if storedriver.CheckActive(redisc) {
+					RedisPool.Release(redisc)
+				} else {
+					redisc.Close()
+				}
 			} else {
-				redisc.Close()
+				RedisPool.Release(redisc)
 			}
 
 		} else {
@@ -168,7 +173,7 @@ func (job *Job) Write(table string) {
 			if er == nil {
 				redierr := storedriver.SetData(redisc, strconv.Itoa(int(job.Jobid)), data)
 				if redierr != nil {
-					log.Println(redierr)
+					Logger.Println(redierr)
 				}
 				if storedriver.CheckActive(redisc) {
 					RedisPool.Release(redisc)
@@ -198,6 +203,8 @@ var RedisPool *storedriver.Pool
 var MysqlPool *gorose.Engin
 var Table string
 var FilesHandle *storedriver.Badger
+var LogPath string = "/var/log/montor.log"
+var Logger *log.Logger
 
 func SetCpu(con *storedriver.MonitorConfig) {
 	if con.CpuNum > runtime.NumCPU() {
@@ -267,6 +274,8 @@ func init() {
 	Table = config.Db.Mysqlcon.Table
 	SyncBadgerJob()
 	DelAllFromRedis()
+	file, _ = os.OpenFile(LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	Logger = log.New(file, "Trace:", log.LstdFlags|log.Llongfile)
 
 }
 
