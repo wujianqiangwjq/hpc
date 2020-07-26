@@ -374,27 +374,30 @@ func HandleOneRecye(con *Controller, direct bool) {
 	con.Mutex.Unlock()
 	var wg sync.WaitGroup
 	jobs := C.get_jobs()
-	size := int(jobs.record_count)
-	log.Println("size", size)
-	if size > 0 {
-		if num > size {
-			num = size
-		}
-		wg.Add(num)
-		partitions, partitionerror := GetPartition(size, num)
-
-		if partitionerror == nil {
-			for item := range partitions {
-				partition := partitions[item]
-				go HandlePartion(&wg, &partition, jobs, Table)
+	if jobs != nil {
+		size := int(jobs.record_count)
+		log.Println("size", size)
+		if size > 0 {
+			if num > size {
+				num = size
 			}
-			wg.Wait()
+			wg.Add(num)
+			partitions, partitionerror := GetPartition(size, num)
 
+			if partitionerror == nil {
+				for item := range partitions {
+					partition := partitions[item]
+					go HandlePartion(&wg, &partition, jobs, Table)
+				}
+				wg.Wait()
+
+			}
 		}
 	}
 	con.Mutex.Lock()
 	con.FlagCom = true
 	con.Mutex.Unlock()
+
 	if !direct {
 		con.Completed <- nil
 	}

@@ -84,6 +84,9 @@ job_info_msg_t *get_jobs(){
    int slurm_err;
    job_info_msg_t *jobs;
    slurm_err = slurm_load_jobs((time_t) NULL, &jobs, SHOW_DETAIL);
+   if (slurm_err == -1){
+    return NULL;
+   }
    return jobs;   
 }
 
