@@ -38,6 +38,45 @@ var JobState = map[int]string{
 	12: "END",
 }
 
+type Cache struct {
+	cache []map[int]int
+	Mutex sync.Mutex
+}
+
+func (cache *Cache) ExistAndSet(id int) bool {
+	flag := false
+	cache.Mutex.Lock()
+	_, ok := cache.cache[id]
+	if ok {
+		cache.cache[id] = 1
+		flag = true
+	} else {
+		item := make(map[int]int)
+		item[id] = 1
+		cache.cache = append(cache.cache, item)
+	}
+	cache.Mutex.Unlock()
+	return flag
+}
+func (cache *Cache) SetDefault() {
+	cache.Mutex.Lock()
+	for item := range cache.cache {
+		cache.cache[item] = 0
+	}
+	cache.Mutex.Unlock()
+}
+func (cache *Cache) Del() {
+	cache.Mutex.Lock()
+	for item := range cache.cache {
+		if cache.cache[item] == 0 {
+			delete(cache.cache, item)
+		}
+	}
+	cache.Mutex.Unlock()
+}
+
+var GlobalCache Cache
+
 type Job struct {
 	Jobid      uint32
 	Jobname    string
@@ -124,33 +163,39 @@ func (job *Job) Write(table string) {
 			"command":    job.Jobcommand,
 		}
 		if job.Jobstatus >= 3 {
-			redisc, er := RedisPool.Acquire()
-			if er == nil {
-				mem, memer := storedriver.GetKey(redisc, strconv.Itoa(int(job.Jobid)), []string{"memory"})
-				if memer == nil && len(mem) == 1 {
-					if mem[0] != nil {
-						memstr := mem[0].(string)
-						data["memory"], _ = strconv.ParseInt(memstr, 10, 64)
+			exit := GlobalCache.ExistAndSet(int(job.Jobid))
+			if !exit {
+				//get mem from redis
+				redisc, er := RedisPool.Acquire()
+				if er == nil {
+					mem, memer := storedriver.GetKey(redisc, strconv.Itoa(int(job.Jobid)), []string{"memory"})
+					if memer == nil && len(mem) == 1 {
+						if mem[0] != nil {
+							memstr := mem[0].(string)
+							data["memory"], _ = strconv.ParseInt(memstr, 10, 64)
+						}
 					}
 				}
-			}
-
-			inserterr := storedriver.InsertData(MysqlPool, table, data)
-			if inserterr != nil {
-				Logger.Println(inserterr)
-				filerr := FilesHandle.Add(strconv.Itoa(int(job.Jobid)), data)
-				Logger.Println(filerr)
-			}
-			delerr := storedriver.DeleteKeys(redisc, strconv.Itoa(int(job.Jobid)))
-			if delerr != nil {
-				Logger.Println(delerr)
-				if storedriver.CheckActive(redisc) {
-					RedisPool.Release(redisc)
+				//store the data to mysql
+				inserterr := storedriver.InsertData(MysqlPool, table, data)
+				if inserterr != nil {
+					Logger.Println(inserterr)
+					filerr := FilesHandle.Add(strconv.Itoa(int(job.Jobid)), data)
+					Logger.Println(filerr)
 				} else {
-					redisc.Close()
+					GlobalCache.ExistAndSet()
 				}
-			} else {
-				RedisPool.Release(redisc)
+				delerr := storedriver.DeleteKeys(redisc, strconv.Itoa(int(job.Jobid)))
+				if delerr != nil {
+					Logger.Println(delerr)
+					if storedriver.CheckActive(redisc) {
+						RedisPool.Release(redisc)
+					} else {
+						redisc.Close()
+					}
+				} else {
+					RedisPool.Release(redisc)
+				}
 			}
 
 		} else {
@@ -383,6 +428,7 @@ func HandlePartion(wg *sync.WaitGroup, p *Partition, jobs *C.struct_job_info_msg
 }
 
 func main() {
+
 	con := &Controller{
 		Second:    config.Recyle,
 		MaxNumber: config.CpuNum,
@@ -393,6 +439,8 @@ func main() {
 	}
 	ticker := time.NewTicker(time.Second * 8)
 	for {
+		con.Cache.Del()
+		con.Cache.SetDefault()
 		if con.Direct {
 			HandleOneRecye(con, true)
 		} else {
