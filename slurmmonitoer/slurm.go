@@ -137,6 +137,7 @@ func (job *Job) Set(pjob C.struct_privitejob) {
 	if job.Jobgpus == 0 && job.Jobtres != "" {
 		job.Jobgpus = job.Jobnodes * GetGpus(job.Jobtres)
 	}
+
 }
 func (job *Job) Write(table string) {
 	state, ok := JobState[job.Jobstatus]
@@ -390,6 +391,7 @@ func HandleOneRecye(con *Controller, direct bool) {
 					go HandlePartion(&wg, &partition, jobs, Table)
 				}
 				wg.Wait()
+				C.free_jobs(jobs)
 
 			}
 		}
