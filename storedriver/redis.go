@@ -33,7 +33,7 @@ func NewRedisConfig(address string, password string, port string) *RedisClient {
 func DeleteKeys(client *redis.Client, partin string) error {
 	var er error = nil
 	keys, kerr := client.Keys(ctx, partin).Result()
-	if kerr == nil {
+	if kerr == nil && len(keys) > 0 {
 		_, er = client.Del(ctx, keys...).Result()
 	}
 	return er
