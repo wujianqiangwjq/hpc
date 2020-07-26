@@ -39,7 +39,7 @@ var JobState = map[int]string{
 }
 
 type Cache struct {
-	cache []map[int]int
+	cache map[int]int
 	Mutex sync.Mutex
 }
 
@@ -51,9 +51,7 @@ func (cache *Cache) ExistAndSet(id int) bool {
 		cache.cache[id] = 1
 		flag = true
 	} else {
-		item := make(map[int]int)
-		item[id] = 1
-		cache.cache = append(cache.cache, item)
+		cache.cache[id] = 1
 	}
 	cache.Mutex.Unlock()
 	return flag
@@ -75,7 +73,7 @@ func (cache *Cache) Del() {
 	cache.Mutex.Unlock()
 }
 
-var GlobalCache Cache
+var GlobalCache Cache = Cache{cache: make(map[int]int)}
 
 type Job struct {
 	Jobid      uint32
@@ -183,7 +181,7 @@ func (job *Job) Write(table string) {
 					filerr := FilesHandle.Add(strconv.Itoa(int(job.Jobid)), data)
 					Logger.Println(filerr)
 				} else {
-					GlobalCache.ExistAndSet()
+					GlobalCache.ExistAndSet(int(job.Jobid))
 				}
 				delerr := storedriver.DeleteKeys(redisc, strconv.Itoa(int(job.Jobid)))
 				if delerr != nil {
@@ -439,8 +437,8 @@ func main() {
 	}
 	ticker := time.NewTicker(time.Second * 8)
 	for {
-		con.Cache.Del()
-		con.Cache.SetDefault()
+		GlobalCache.Del()
+		GlobalCache.SetDefault()
 		if con.Direct {
 			HandleOneRecye(con, true)
 		} else {
