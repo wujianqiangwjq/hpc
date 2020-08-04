@@ -47,6 +47,17 @@ struct privitejob {
     char* work_dir;
 };
 
+struct privitenode {
+    uint16_t cpus;
+    uint32_t cpu_load;
+    uint64_t free_mem;
+    char* gres;
+    char* gres_used;
+    char* name;
+    uint64_t real_memory;
+    uint16_t alloc_cpus;
+    uint64_t alloc_memory;
+}
 void printall()
 {
         int i, j, slurm_err;
@@ -126,4 +137,36 @@ struct privitejob get_job(job_info_msg_t *jobs, int index){
     }
     return job;
        
+}
+
+
+node_info_msg_t *get_nodes(){
+    int slurm_err;
+    node_info_msg_t *nodes;
+    slurm_err = slurm_load_node((time_t) NULL, &nodes, SHOW_DETAIL);
+    if (slurm_err == -1){
+        return NULL;
+    }else{
+        return nodes;
+    }  
+}
+
+struc privitenode get_node(node_info_msg_t *nodes, int index){
+    struct privitenode node;
+    node_info_t * node_info=NULL;
+    node_info = nodes->node_array[index];
+    node.name = node_info.name;
+    node.cpus = node_info.cpus;
+    node.cpu_load = node_info.cpu_load;
+    node.free_mem =node_info.free_mem;
+    node.gres = node_info.gres;
+    node.gres_used = node_info.gres_used;
+    node.real_memory = node_info.real_memory;
+    slurm_get_select_nodeinfo(node_info.select_nodeinfo, SELECT_NODEDATA_SUBCNT,NODE_STATE_ALLOCATED,&node.alloc_cpus);
+    slurm_get_select_nodeinfo(node_info.select_nodeinfo, SELECT_NODEDATA_MEM_ALLOC,NODE_STATE_ALLOCATED,&node.alloc_memory);
+    return node;
+}
+
+void free_nodes(node_info_msg_t * nodes){
+    slurm_free_node_info_msg(nodes);
 }
